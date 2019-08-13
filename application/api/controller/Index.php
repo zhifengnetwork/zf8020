@@ -11,7 +11,37 @@ use think\Db;
 class Index extends ApiBase
 {
 
+    public function changeTableVal()
+    {
+        $table = I('table'); // 表名
+        $id_name = I('id_name'); // 表主键id名
+        $id_value = I('id_value'); // 表主键id值
+        $field = I('field'); // 修改哪个字段
+        $value = I('value'); // 修改字段值
+        $res = M($table)->where([$id_name => $id_value])->update(array($field => $value));
+        if ($res) {
+            $this->ajaxReturn(['status' => 1, 'msg' => '修改成功']);
+        } else {
+            $this->ajaxReturn(['status' => 0, 'msg' => '无修改']);
+        }
+        // 根据条件保存修改的数据
+    }
 
+    public function changeTableCommend()
+    {
+        $table = I('table'); // 表名
+        $id_name = I('id_name'); // 表主键id名
+        $id_value = I('id_value'); // 表主键id值
+        $field = I('field'); // 修改哪个字段
+        $value = I('value'); // 修改字段值
+
+        $res = M($table)->where([$id_name => $id_value])->update(array($field => $value));
+        if ($res) {
+            $this->ajaxReturn(['status' => 1, 'msg' => '修改成功']);
+        } else {
+            $this->ajaxReturn(['status' => 0, 'msg' => '无修改']);
+        }
+    }
     /**
      * @api {GET} /index/index 首页
      * @apiGroup index
@@ -19,7 +49,7 @@ class Index extends ApiBase
      *
      * @apiParamExample {json} 请求数据:
      * {
-     *     
+     *
      * }
      * @apiSuccessExample {json} 返回数据：
      * //正确返回结果
@@ -45,7 +75,7 @@ class Index extends ApiBase
      *           }
      *           ],banner轮播图
      *           "announce": [
-     *           
+     *
      *           ],公告
      *           "hot_goods": [
      *           {
@@ -93,7 +123,6 @@ class Index extends ApiBase
     public function index()
     {
 
-
 //        分类导航
         $catenav = Db::table('category')->field('cat_id,cat_name')->where(['is_show' =>1 ])->select();
 
@@ -117,36 +146,39 @@ class Index extends ApiBase
         }
 
 
-
-        $hot_goods = Db::table('goods')->alias('g')
+        //购买获取推荐专区
+        $push_goods = Db::table('goods')->alias('g')
                 ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
                 ->where('gi.main',1)
                 ->where('g.is_show',1)
                 ->where('g.is_del',0)
+                ->where('g.is_push',1)
                 ->where('FIND_IN_SET(3,g.goods_attr)')
                 ->order('g.goods_id DESC')
                 ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
                 ->limit(4)
                 ->select();
-        
-        if($hot_goods){
-            foreach($hot_goods as $key=>&$value){
+
+        if($push_goods){
+            foreach($push_goods as $key=>&$value){
                 $value['img'] = Config('c_pub.apiimg') .$value['img'];
             }
         }
-        
+        //热卖商品
         $recommend_goods = Db::table('goods')->alias('g')
-                ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
-                ->where('gi.main',1)
-                ->where('g.is_show',1)
-                ->where('g.is_del',0)
-                ->where('FIND_IN_SET(1,g.goods_attr)')
-                ->order('g.goods_id DESC')
-                ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
-                ->paginate(4);
+            ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
+            ->where('gi.main',1)
+            ->where('g.is_show',1)
+            ->where('g.is_del',0)
+            ->where('g.is_hot',1)
+            ->where('FIND_IN_SET(3,g.goods_attr)')
+            ->order('g.goods_id DESC')
+            ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
+            ->limit(4)
+            ->select();
 
         if($recommend_goods){
-            $recommend_goods = $recommend_goods->all();
+//            $recommend_goods = $recommend_goods->all();
             foreach($recommend_goods as $key=>&$value){
                 $value['img'] = Config('c_pub.apiimg') .$value['img'];
             }
@@ -168,9 +200,9 @@ class Index extends ApiBase
                 $value['img'] = Config('c_pub.apiimg') .$value['img'];
             }
         }
-        
-        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'announce'=>$announce,'selfnav'=>$selfnav,'hot_goods'=>$hot_goods,'recommend_goods'=>$recommend_goods,'goods_gift'=>$goods_gift]]);
+
+        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'announce'=>$announce,'selfnav'=>$selfnav,'push_goods'=>$push_goods,'recommend_goods'=>$recommend_goods]]);
     }
 
-    
+
 }
