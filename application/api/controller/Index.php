@@ -93,14 +93,30 @@ class Index extends ApiBase
     public function index()
     {
 
+
+//        分类导航
+        $catenav = Db::table('category')->field('cat_id,cat_name')->where(['is_show' =>1 ])->select();
+
+        //轮播图
         $banners=Db::name('advertisement')->field('picture,title,url')->where(['type'=>0,'state'=>1])->order('sort','desc')->limit(3)->select();
         if($banners){
             foreach($banners as $bk=>$bv){
                 $banners[$bk]['picture']=SITE_URL.$bv['picture'];
             }
         }
-        
+
+
+        //公告
         $announce=Db::name('announce')->field('id,title,urllink as link,desc')->where(['status'=>1])->order('create_time','desc')->limit(3)->select();
+
+
+        //自定义分类导航
+        $selfnav = Db::table('catenav')->field('title,image,url')->where(['status' => ['<>', -1]])->limit(4)->select();
+        for ($i = 0; $i < count($selfnav); $i++) {
+            $navlist[$i]['image'] = SITE_URL . '/public/' . $selfnav[$i]['image'];
+        }
+
+
 
         $hot_goods = Db::table('goods')->alias('g')
                 ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
@@ -153,7 +169,7 @@ class Index extends ApiBase
             }
         }
         
-        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['banners'=>$banners,'announce'=>$announce,'hot_goods'=>$hot_goods,'recommend_goods'=>$recommend_goods,'goods_gift'=>$goods_gift]]);
+        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'announce'=>$announce,'selfnav'=>$selfnav,'hot_goods'=>$hot_goods,'recommend_goods'=>$recommend_goods,'goods_gift'=>$goods_gift]]);
     }
 
     

@@ -18,6 +18,16 @@ use think\Request;
 
 class User extends ApiBase
 {
+
+
+    //用户协议
+    public function consult()
+    {
+        $consult = Db::table('site')->field('consult')->find();
+        $this->ajaxReturn(['status'=>200,'msg'=>'获取成功','data'=>$consult]);
+    }
+
+
     /**
      * @api {POST} /user/login 用户登录
      * @apiGroup user
@@ -159,10 +169,10 @@ class User extends ApiBase
         try {
             if (!Request::instance()->isPost()) return $this->getResult(301, 'error', '请求方式有误');
             $phone = input('post.phone/s', '');
-            $temp = input('post.temp/s', '');
-            $auth = input('post.auth/s', '');
-            $type = input('type/d', 1);
-            $result = $this->sendPhoneCode($phone, $temp, $auth, $type);
+//            $temp = input('post.temp/s', '');
+//            $auth = input('post.auth/s', '');
+//            $type = input('type/d', 1);
+            $result = $this->sendPhoneCode($phone);
             if ($result['status'] == 1) {
                 return $this->successResult($result['msg']);
             }
@@ -209,71 +219,79 @@ class User extends ApiBase
      * "data": false
      * }
      */
-    public function register()
+    public function dologin()
     {
         $result = [];
         try {
             if (!Request::instance()->isPost()) return $this->getResult(301, 'error', '请求方式有误');
             $phone = input('phone/s', '');
             $verify_code = input('verify_code/s', '');
-            $password    = input('user_password/s', '');
-            $confirm_password = input('confirm_password/s', '');
-            $uid = input('uid', 0);
-            if ($password != $confirm_password) {
-                return $this->failResult('密码不一致');
-            }
+//            $type = input('verify_code/s', '');
+//            $password    = input('user_password/s', '');
+//            $confirm_password = input('confirm_password/s', '');
+//            $uid = input('uid', 0);
+//            if ($password != $confirm_password) {
+//                return $this->failResult('密码不一致');
+//            }
 
-            $result = $this->validate($this->param, 'User.register_phone');
-            if (true !== $result) {
-                return $this->failResult($result, 301);
-            }
+//            $result = $this->validate($this->param, 'User.register_phone');
+//            if (true !== $result) {
+//                return $this->failResult($result, 301);
+//            }
 
             $member = Db::table('member')->where('mobile', $phone)->value('id');
 
-            if ($member) {
-                return $this->failResult('此手机号已注册，请直接登录！', 301);
+            if (!empty($member)) {
+                $data['token']   = $this->create_token($member);
+                $data['mobile']  = $phone;
+                $data['id']      = $member;
+                return $this->successResult($data);
             }
-            if ($uid) {
-                $info = Db::table('member')->where('id', $uid)->find();
-                if (!$info) {
-                    return $this->failResult('邀请人账号不存在！', 301);
+            if (empty($member)){
+                //            $salt     = create_salt();
+//            $password = md5($salt . $password);
+                $insert['mobile']     = $phone;
+//            $insert['salt']       = $salt;
+//            $insert['password']   = $password;
+                $insert['createtime'] = time();
+                $insert['realname']   = '默认昵称';
+                $insert['avatar']     = SITE_URL.'/static/images/headimg/20190711156280864771502.png';
+
+                $id = Db::table('member')->insertGetId($insert);
+                if (!$id) {
+                    return $this->failResult('注册失败，请重试！', 301);
                 }
-               //绑定上下级关系
-               $insert['first_leader']   = $uid;
-               $insert['second_leader']  = $info['first_leader']; //  第一级推荐人
-               $insert['third_leader']   = $info['second_leader']; // 第二级推荐人
-            }else{
-               $insert['first_leader']   = 0;
+                $data['token']   = $this->create_token($id);
+                $data['mobile']  = $phone;
+                $data['id']      = $id;
+                return $this->successResult($data);
             }
+//            if ($uid) {
+//                $info = Db::table('member')->where('id', $uid)->find();
+//                if (!$info) {
+//                    return $this->failResult('邀请人账号不存在！', 301);
+//                }
+//               //绑定上下级关系
+//               $insert['first_leader']   = $uid;
+//               $insert['second_leader']  = $info['first_leader']; //  第一级推荐人
+//               $insert['third_leader']   = $info['second_leader']; // 第二级推荐人
+//            }else{
+//               $insert['first_leader']   = 0;
+//            }
             //验证码判断
             $res = $this->phoneAuth($phone, $verify_code);
             if ($res === -1) {
-                // return $this->failResult('验证码已过期！', 301);
+                 return $this->failResult('验证码已过期！', 301);
             } else if (!$res) {
-                // return $this->failResult('验证码错误！', 301);
+                 return $this->failResult('验证码错误！', 301);
             }
-            $salt     = create_salt();
-            $password = md5($salt . $password);
-            $insert['mobile']     = $phone;
-            $insert['salt']       = $salt;
-            $insert['password']   = $password;
-            $insert['createtime'] = time();
-            $insert['realname']   = '默认昵称';
-            $insert['avatar']     = SITE_URL.'/static/images/headimg/20190711156280864771502.png';
-            
-            $id = Db::table('member')->insertGetId($insert);
-            if (!$id) {
-                return $this->failResult('注册失败，请重试！', 301);
-            }
-            if($uid){
-                // if($info['if_buy_fifty']){
-                //     Db::table('member')->where('id',$uid)->setInc('release');
-                // }
-            }
-            $data['token']   = $this->create_token($id);
-            $data['mobile']  = $phone;
-            $data['id']      = $id;
-            return $this->successResult($data);
+
+//            if($uid){
+//                // if($info['if_buy_fifty']){
+//                //     Db::table('member')->where('id',$uid)->setInc('release');
+//                // }
+//            }
+
         } catch (Exception $e) {
             $result = $this->failResult($e->getMessage(), 301);
         }

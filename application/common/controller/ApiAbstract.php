@@ -62,26 +62,27 @@ class ApiAbstract extends Controller
      * @param $type     默认为1
      * @return array    'status' => 1 , 'msg'=>'发送成功！'   status 1:表示发送成功；-2 表示发送失败；
      */
-    public function sendPhoneCode($mobile, $temp, $auth, $type)
+    public function sendPhoneCode($mobile )
     {
 
-        if (!$mobile || ($temp != 'sms_forget' && $temp != 'sms_reg') || !$auth) {
+        if (!$mobile ) {
             return ['status' => -1, 'msg' => '参数错误'];
         }
 
-        $Md5 = md5($mobile . $temp);
-        if ($Md5 != $auth) {
-            return ['status' => -2, 'msg' => '非法请求！'];
-        }
+//        $Md5 = md5($mobile . $temp);
+//        if ($Md5 != $auth) {
+//            return ['status' => -2, 'msg' => '非法请求！'];
+//        }
         $member = Db::table('member')->where('mobile', $mobile)->value('id');
-        if ($type == 1) {
-            if (($temp == 'sms_forget') && empty($member)) {
-                return ['status' => -2, 'msg' => '此手机号未注册！'];
-            }
-            if (($temp == 'sms_reg') && !(empty($member))) {
-                return ['status' => -2, 'msg' => '此手机号已注册，请直接登录！'];
-            }
-        }
+
+//        if ($type == 1) {
+//            if ( empty($member)) {
+//                return ['status' => -2, 'msg' => '此手机号未注册！'];
+//            }
+//            if (!(empty($member))) {
+//                return ['status' => -2, 'msg' => '此手机号已注册，请直接登录！'];
+//            }
+//        }
         $phone_number = checkMobile($mobile);
         if ($phone_number == false) {
             return ['status' => -2, 'msg' => '手机号码格式不对！'];
@@ -98,7 +99,7 @@ class ApiAbstract extends Controller
         $data['mobile'] = $mobile;
         $data['auth_code'] = $code;
         $data['start_time'] = time();
-        $data['exprie_time'] = time() + 60;
+        $data['exprie_time'] = time() + 300;
 
         $res = Db::table('phone_auth')->insert($data);
         if (!$res) {
