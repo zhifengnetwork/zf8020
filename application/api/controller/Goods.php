@@ -46,7 +46,7 @@ class Goods extends ApiBase
     /*public function categoryList(){
         $list = Db::name('category')->where('is_show',1)->field('cat_id,cat_name,pid,img')->order('sort DESC,cat_id DESC')->select();
         $list  = getTree1($list);
-        
+
         if($list){
             foreach($list as $key=>&$value){
                 //热销
@@ -85,7 +85,7 @@ class Goods extends ApiBase
                 }
             }
         }
-        
+
         $this->ajaxReturn(['status' => 1 , 'msg'=>'获取成功','data'=>$list]);
     }*/
 
@@ -205,7 +205,7 @@ class Goods extends ApiBase
      */
     public function categoryList()
     {
-        
+
         $list = Db::name('category')->where('is_show',1)->order('sort DESC,cat_id DESC')->select();
         $list  = getTree1($list);
         foreach($list as $key=>$value){
@@ -234,7 +234,7 @@ class Goods extends ApiBase
                 }
             }
         }
-        
+
         $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>$list]);
     }
 
@@ -273,7 +273,7 @@ class Goods extends ApiBase
         }else{
             $order['goods_id'] = 'DESC';
         }
-        
+
         $goods_list = Db::name('goods')->alias('g')
                         ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
                         ->where('gi.main',1)
@@ -290,7 +290,7 @@ class Goods extends ApiBase
                 $value['attr_name'] = Db::table('goods_attr')->where('attr_id','in',$value['goods_attr'])->column('attr_name');
             }
         }
-        
+
         $this->ajaxReturn(['status' => 1 , 'msg'=>'获取成功','data'=>['cate_list'=>$cate_list,'goods_list'=>$goods_list['data']]]);
 
     }*/
@@ -493,7 +493,7 @@ class Goods extends ApiBase
      *   "collection": 0,是否收藏
      *   "comment_count": 18,评论总数
      *   "coupon": [
-     *       
+     *
      *   ]优惠券
      *   }
      * }
@@ -510,18 +510,17 @@ class Goods extends ApiBase
      * }
      */
     public function goodsDetail()
-    {   
+    {
         $user_id = $this->get_user_id();
-        
         $goods_id = input('goods_id');
-        
+
         $goodsRes = Db::table('goods')->alias('g')
                     ->join('goods_attr ga','FIND_IN_SET(ga.attr_id,g.goods_attr)','LEFT')
                     ->field('g.*,GROUP_CONCAT(ga.attr_name) attr_name')
                     ->where('g.is_show',1)
                     ->where('g.is_del',0)
                     ->find($goods_id);
-        
+
         if (empty($goodsRes) || !$goodsRes['goods_id']) {
             $this->ajaxReturn(['status' => 301 , 'msg'=>'商品不存在！']);
         }
@@ -536,15 +535,16 @@ class Goods extends ApiBase
         $goodsRes['stock'] = $goodsRes['spec']['count_num'];
         $goodsRes['groupon_price'] = $goodsRes['spec']['min_groupon_price'];
         unset($goodsRes['spec']['count_num'],$goodsRes['spec']['min_groupon_price']);
-        
+
         //组图
         $goodsRes['img'] = Db::table('goods_img')->where('goods_id',$goods_id)->field('picture')->order('main DESC')->select();
+
         if($goodsRes['img']){
             foreach($goodsRes['img'] as $key=>&$value){
-                $value['picture'] = Config('c_pub.apiimg') .$value['picture'];
+                $value['picture'] =  Config('c_pub.apiimg') .$value['picture'];
             }
         }
-        
+//        array_pop($goodsRes['img']);
         //收藏
         $goodsRes['collection'] = Db::table('collection')->where('user_id',$user_id)->where('goods_id',$goods_id)->find();
         if($goodsRes['collection']){
@@ -552,26 +552,65 @@ class Goods extends ApiBase
         }else{
             $goodsRes['collection'] = 0;
         }
-        
+
         //评论总数
         $goodsRes['comment_count'] = Db::table('goods_comment')->where('goods_id',$goods_id)->count();
 
-        //优惠券
-        $where = [];
-        $where['start_time'] = ['<', time()];
-        $where['end_time'] = ['>', time()];
-        $where['goods_id'] = ['in',$goods_id.',0'];
-        $goodsRes['coupon'] = Db::table('coupon')->where($where)->select();
-        if($goodsRes['coupon']){
-            foreach($goodsRes['coupon'] as $key=>$value){
-                $res = Db::table('coupon_get')->where('user_id',$user_id)->where('coupon_id',$value['coupon_id'])->find();
-                if($res){
-                    $goodsRes['coupon'][$key]['is_lq'] = 1;
+        //评论列表
+        $pageParam['query']['goods_id'] = $goods_id;
+        $comment = Db::table('goods_comment')->alias('gc')
+            ->join('member m','m.id=gc.user_id','LEFT')
+            ->field('m.avatar,m.realname,gc.content,gc.star_rating,gc.replies,gc.praise,gc.add_time,gc.img,gc.sku_id')
+            ->where('gc.goods_id',$goods_id)
+            ->paginate(10,false,$pageParam);
+
+
+        $comment = $comment->all();
+
+
+        if (empty($comment)) {
+            $comment = '暂无评论！';
+            $goodsRes['commentlist'] = $comment;
+        }else{
+            foreach($comment as $key=>$vv ){
+
+//                $comment[$key]['mobile'] = $value['mobile'] ? substr_cut($value['mobile']) : '';
+                $comment[$key]['add_time'] = date("Y-m-d",$comment[$key]['add_time']);
+                if($vv['img']){
+
+                    $comment[$key]['img'] = explode(',',$vv['img']);
+                    foreach ($comment[$key]['img'] as $k=>$v){
+                        $comment[$key]['img'][$k] = SITE_URL.'/public/upload/images/'.$comment[$key]['img'][$k];
+                    }
                 }else{
-                    $goodsRes['coupon'][$key]['is_lq'] = 0;
+                    $comment[$key]['img'] = [];
                 }
+
+                $comment[$key]['spec'] = $this->get_sku_str($vv['sku_id']);
+
+//                $comment[$key]['is_praise'] = Db::table('goods_comment_praise')->where('comment_id',$value['comment_id'])->where('user_id',$user_id)->count();
+
             }
+            $goodsRes['commentlist'] = $comment;
         }
+
+
+//        //优惠券
+//        $where = [];
+//        $where['start_time'] = ['<', time()];
+//        $where['end_time'] = ['>', time()];
+//        $where['goods_id'] = ['in',$goods_id.',0'];
+//        $goodsRes['coupon'] = Db::table('coupon')->where($where)->select();
+//        if($goodsRes['coupon']){
+//            foreach($goodsRes['coupon'] as $key=>$value){
+//                $res = Db::table('coupon_get')->where('user_id',$user_id)->where('coupon_id',$value['coupon_id'])->find();
+//                if($res){
+//                    $goodsRes['coupon'][$key]['is_lq'] = 1;
+//                }else{
+//                    $goodsRes['coupon'][$key]['is_lq'] = 0;
+//                }
+//            }
+//        }
 
         //属性  add  by zgp
         $arr_attr = null;
@@ -588,6 +627,7 @@ class Goods extends ApiBase
 
             }
         }
+
         //goods_sku  完善所有组合
         $arr_attr = getArrSet($arr_attr);
 
@@ -606,6 +646,7 @@ class Goods extends ApiBase
                 unset($check_true_arr[$k][1]);
                 unset($check_true_arr[$k][2]);
             }
+
             //全部的sku数组
             foreach($check_true_arr as $k=>$vv){
                 $sku_all_arr[$k] = $vv['arr_str'];
@@ -633,17 +674,17 @@ class Goods extends ApiBase
 
             }
         }
-        
+
         // 查询地址
-        $addr_data['ua.user_id'] = $user_id;
-        $addr_data['ua.is_default'] = 1;
-        $addressM = Model('UserAddr');
-        $addr_res = $addressM->getAddressFind($addr_data);
-        $goodsRes['address'] = $addr_res['p_cn'] . $addr_res['c_cn'] . $addr_res['d_cn'] . $addr_res['s_cn'] . $addr_res['address'];
+//        $addr_data['ua.user_id'] = $user_id;
+//        $addr_data['ua.is_default'] = 1;
+//        $addressM = Model('UserAddr');
+//        $addr_res = $addressM->getAddressFind($addr_data);
+//        $goodsRes['address'] = $addr_res['p_cn'] . $addr_res['c_cn'] . $addr_res['d_cn'] . $addr_res['s_cn'] . $addr_res['address'];
 
         $goodsRes['content'] = str_replace("/ueditor/",  SITE_URL . "/ueditor/", $goodsRes['content']);
         $goodsRes['content_param'] = str_replace("/ueditor/",  SITE_URL . "/ueditor/", $goodsRes['content_param']);
-              
+
         $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>$goodsRes]);
 
     }
@@ -675,7 +716,7 @@ class Goods extends ApiBase
     *          "praise": 0,点赞
     *          "add_time": 1558087885,
     *          "img": [
-    *          
+    *
     *          ],评论图片
     *          "sku_id": 4,
     *          "spec": "规格:升级版,颜色:阳光米,尺寸:小",购买规格
@@ -707,9 +748,9 @@ class Goods extends ApiBase
         if (empty($comment)) {
             $this->ajaxReturn(['status' => 200 , 'msg'=>'暂无评论！','data'=>[]]);
         }
-        
+
         foreach($comment as $key=>$value ){
-            
+
             $comment[$key]['mobile'] = $value['mobile'] ? substr_cut($value['mobile']) : '';
 
             if($value['img']){
@@ -725,7 +766,7 @@ class Goods extends ApiBase
 
             $comment[$key]['is_praise'] = Db::table('goods_comment_praise')->where('comment_id',$value['comment_id'])->where('user_id',$user_id)->count();
         }
-        
+
         $this->ajaxReturn(['status' => 1 , 'msg'=>'获取成功','data'=>$comment]);
     }
 
@@ -785,7 +826,7 @@ class Goods extends ApiBase
     public function get_sku_str($sku_id)
     {
         $sku_attr = Db::name('goods_sku')->where('sku_id', $sku_id)->value('sku_attr');
-        
+
         if(!$sku_attr){
             return false;
         }
@@ -864,7 +905,7 @@ class Goods extends ApiBase
         $limited_img = Db::table('category')->where('cat_name','like',"%限时购%")->value('img');
 
         $page = input('page');
-        
+
         $where['is_show'] =  1;
         $where['main'] =  1;
         $where['is_del'] =  0;
@@ -928,7 +969,7 @@ class Goods extends ApiBase
         if($res){
             Db::table('goods_comment')->where('id',$comment_id)->setDec('praise',1);
             Db::table('goods_comment_praise')->where($where)->delete();
-            
+
             $this->ajaxReturn(['status' => 1 , 'msg'=>'取消点赞成功！','data'=>'']);
         }else{
             Db::table('goods_comment')->where('id',$comment_id)->setInc('praise',1);
