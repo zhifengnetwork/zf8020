@@ -204,5 +204,28 @@ class Index extends ApiBase
         $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'announce'=>$announce,'selfnav'=>$selfnav,'push_goods'=>$push_goods,'recommend_goods'=>$recommend_goods]]);
     }
 
+    //列表页
+    public function list_page()
+    {
+        $cat_id = input('cat_id/s', '');
+
+        $goods = Db::table('goods')->alias('g')
+            ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
+            ->where('gi.main',1)
+            ->where('g.is_show',1)
+            ->where('g.is_del',0)
+            ->where('g.cat_id1',26)
+            ->order('g.goods_id DESC')
+            ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
+            ->limit(4)
+            ->select();
+        if($goods){
+            foreach($goods as $key=>&$value){
+                $value['img'] = Config('c_pub.apiimg') .$value['img'];
+            }
+        }
+        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['goods'=>$goods]]);
+    }
+
 
 }
