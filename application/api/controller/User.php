@@ -877,6 +877,11 @@ class User extends ApiBase
             return $this->failResult('用户不存在', 301);
         }
         $list  = Db::name('member_withdrawal')->where(['user_id' => $user_id])->field('createtime,money,taxfee,status')->order('createtime desc')->select();
+
+        foreach ($list as $key=>$value)
+        {
+            $list[$key]['createtime'] = date('Ymd',$value['createtime']);
+        }
         $data['list'] = $list;
         return $this->successResult($data);
     }
@@ -989,7 +994,6 @@ class User extends ApiBase
         $member  = Db::name('member')->where(['id' => $user_id])->field('alipay_name,alipay,is_cash,remainder_money')->find();
  
         $money   = input('money/f');
-       
         if(!preg_match("/^\d+(\.\d+)?$/",$money))$this->failResult('请输入正确的金额！', 301);
 
         if($money > $member['remainder_money']){
@@ -1411,7 +1415,10 @@ class User extends ApiBase
         $user_id        = $this->get_user_id();
 
         $recharge_list  = Db::name('recharge_order')->where(['user_id' => $user_id,'order_status' => 1])->field('pay_time,amount')->select();
-        
+        foreach ($recharge_list as $key=>$value)
+        {
+            $recharge_list[$key]['createtime'] = date('Ymd',$value['createtime']);
+        }
         $data['list']   = $recharge_list;
         return $this->successResult($data);
     }

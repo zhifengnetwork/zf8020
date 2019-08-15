@@ -519,20 +519,19 @@ class Order extends ApiBase
      * }
      */
     public function order_list()
-    {   
+    {
         $user_id = $this->get_user_id();
-        
+
         $type = input('type');
-        
+
         $page = input('page',1);
-        
+
         $where = [];
         $pageParam = ['query' => []];
-
         //50元专区
         if($type=='fifty'){
-            
-            
+
+
             $order_list = Db::table('fifty_zone_shop')->where('user_id',$user_id)->order('fz_id DESC')->paginate(10,false,$pageParam);
             if($order_list){
                 $info = Db::table('config')->where('module',5)->column('value','name');
@@ -541,7 +540,7 @@ class Order extends ApiBase
                 $order_list = $order_list->all();
                 foreach($order_list as $key=>&$value){
                     $fifty_order = Db::table('fifty_zone_order')->where('user_id',$user_id)->where('add_time',$value['add_time'])->field('shop_user_id,order_sn')->find();
-                    
+
                     $value['order_sn'] = $fifty_order['order_sn'];
                     $value['shop_user_id'] = $fifty_order['shop_user_id'];
                     if($value['shop_user_id']){
@@ -574,7 +573,7 @@ class Order extends ApiBase
             //         }
             //     }
             // }
-            
+
             $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>$order_list]);
         }
 
@@ -630,7 +629,7 @@ class Order extends ApiBase
         //                 ->order('o.order_id DESC')
         //                 ->field('o.order_id,o.order_sn,g.goods_id,o.comment,og.sku_id,og.goods_name,gi.picture img,og.spec_key_name,og.goods_price,g.original_price,og.goods_num,o.order_status,o.pay_status,o.shipping_status,pay_type,o.add_time')
         //                 ->paginate(10,false,$pageParam);
-        
+//        print_r($where);die;
         $order_list = Db::table('order')->alias('o')
                         ->where($where)
                         ->order('o.order_id DESC')
@@ -639,8 +638,9 @@ class Order extends ApiBase
         $new_arr = [];
         if($order_list){
             $order_list = $order_list->all();
+
             foreach($order_list as $key=>&$value){
-                
+                $order_list[$key]['add_time'] = date('Y-m-d H:i:s',$order_list[$key]['add_time']);
                 $value['goods'] = Db::table('order_goods')->alias('og')
                             ->join('goods_img gi','gi.goods_id=og.goods_id')
                             ->where('gi.main',1)
@@ -670,11 +670,11 @@ class Order extends ApiBase
                         }
                     }
                 }
-                
-                $value['goods_num'] = $goods_num;
-                
 
-                // $value['comment'] = 0; 
+                $value['goods_num'] = $goods_num;
+
+
+                // $value['comment'] = 0;
                 if( $value['order_status'] == 1 && $value['pay_status'] == 0 && $value['shipping_status'] == 0 ){
                     $value['status'] = 1;   //待付款
                 }else if( $value['order_status'] == 1 && $value['pay_status'] == 1 && $value['shipping_status'] == 0 ){
@@ -683,13 +683,13 @@ class Order extends ApiBase
                     $value['status'] = 3;   //待收货
                 }else if( $value['order_status'] == 4 && $value['pay_status'] == 1 && $value['shipping_status'] == 3 ){
                     $value['status'] = 4;   //待评价
-                    
+
                     //是否评价
                     // $comment = Db::table('goods_comment')->where('order_id',$value['order_id'])->find();
                     // if($comment){
                     //     $value['comment'] = 1;
                     // }else{
-                    //     $value['comment'] = 0; 
+                    //     $value['comment'] = 0;
                     // }
 
                 }else if( $value['order_status'] == 3 && $value['pay_status'] == 0 && $value['shipping_status'] == 0 ){
@@ -703,11 +703,11 @@ class Order extends ApiBase
                 }
             }
         }
-        
+
         if(isset($new_arr['goods']) && $new_arr['goods']){
             $order_list = array_merge($order_list,$new_arr);
         }
-        
+
         $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>$order_list]);
     }
 

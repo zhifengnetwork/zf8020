@@ -541,18 +541,18 @@ class Pay extends ApiBase
 
 
     
-public function get_client_ip() {
-    if(getenv('HTTP_CLIENT_IP') && strcasecmp(getenv('HTTP_CLIENT_IP'), 'unknown')) {
-        $ip = getenv('HTTP_CLIENT_IP');
-    } elseif(getenv('HTTP_X_FORWARDED_FOR') && strcasecmp(getenv('HTTP_X_FORWARDED_FOR'), 'unknown')) {
-        $ip = getenv('HTTP_X_FORWARDED_FOR');
-    } elseif(getenv('REMOTE_ADDR') && strcasecmp(getenv('REMOTE_ADDR'), 'unknown')) {
-        $ip = getenv('REMOTE_ADDR');
-    } elseif(isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] && strcasecmp($_SERVER['REMOTE_ADDR'], 'unknown')) {
-        $ip = $_SERVER['REMOTE_ADDR'];
+    public function get_client_ip() {
+        if(getenv('HTTP_CLIENT_IP') && strcasecmp(getenv('HTTP_CLIENT_IP'), 'unknown')) {
+            $ip = getenv('HTTP_CLIENT_IP');
+        } elseif(getenv('HTTP_X_FORWARDED_FOR') && strcasecmp(getenv('HTTP_X_FORWARDED_FOR'), 'unknown')) {
+            $ip = getenv('HTTP_X_FORWARDED_FOR');
+        } elseif(getenv('REMOTE_ADDR') && strcasecmp(getenv('REMOTE_ADDR'), 'unknown')) {
+            $ip = getenv('REMOTE_ADDR');
+        } elseif(isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] && strcasecmp($_SERVER['REMOTE_ADDR'], 'unknown')) {
+            $ip = $_SERVER['REMOTE_ADDR'];
+        }
+        return preg_match ( '/[\d\.]{7,15}/', $ip, $matches ) ? $matches [0] : '';
     }
-    return preg_match ( '/[\d\.]{7,15}/', $ip, $matches ) ? $matches [0] : '';
-}
 
 
 
@@ -573,7 +573,7 @@ public function get_client_ip() {
         $orderNo = time() . 'recharge' . rand(1000, 9999);
 
         if($pay_type==2){
-            
+            $ip = $this->get_client_ip();
             $payData = [
                 'body'        => '微信充值',
                 'subject'     => '微信充值',
@@ -581,7 +581,7 @@ public function get_client_ip() {
                 'timeout_express' => time() + 600,// 表示必须 600s 内付款
                 'amount'       => $money,// 金额
                 'return_param' => '',
-                'client_ip'    => $this->get_server_ip(),// 客户地址
+                'client_ip'    => $ip,// 客户地址
                 'scene_info' => [
                     'type'     => 'Wap',// IOS  Android  Wap  腾讯建议 IOS  ANDROID 采用app支付
                     'wap_url'  => '',//自己的 wap 地址
