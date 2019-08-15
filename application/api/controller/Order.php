@@ -813,7 +813,8 @@ class Order extends ApiBase
         );
 
         $order = Db::table('order')->alias('o')->where($where)->field($field)->find();
-
+        $order['add_time'] = date('Y-m-d H:i:s',$order['add_time']);
+        $order['pay_time'] = date('Y-m-d H:i:s',$order['pay_time']);
         $pay_type = config('PAY_TYPE');
         foreach($pay_type as $key=>$value){
             if($value['pay_type'] == $order['pay_type']){
