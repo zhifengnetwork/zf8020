@@ -1066,10 +1066,8 @@ class Order extends ApiBase
      */
     public function order_comment(){
         $user_id = $this->get_user_id();
-
         $comments = input('comments');
         $comments = json_decode($comments ,true);
-
         $order_id = $comments[0]['order_id'];
         $sku_id = $comments[0]['sku_id'];
         $comments[0]['user_id'] = $user_id;
@@ -1078,6 +1076,7 @@ class Order extends ApiBase
         if($res) $this->ajaxReturn(['status' => 301 , 'msg'=>'该订单商品已经评论过！','data'=>'']);
 
         $order = Db::table('order')->where('order_id',$order_id)->where('user_id',$user_id)->field('order_status,pay_status,shipping_status')->find();
+        print_r($order);die;
         if(!$order) $this->ajaxReturn(['status' => 301 , 'msg'=>'订单不存在！','data'=>'']);
         
         if( $order['order_status'] != 4 && $order['pay_status'] != 1 && $order['shipping_status'] != 3 ){
@@ -1283,7 +1282,7 @@ class Order extends ApiBase
      */
     public function apply_refund(){
         $user_id = $this->get_user_id();
-
+        print_r($user_id);die;
         $order_id = input('order_id');
         $refund_type = input('refund_type');
         $refund_reason = input('refund_reason');

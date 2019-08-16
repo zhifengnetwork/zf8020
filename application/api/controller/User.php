@@ -238,9 +238,10 @@ class User extends ApiBase
 //            if (true !== $result) {
 //                return $this->failResult($result, 301);
 //            }
-
+            if(!isMobile($phone)){
+                return $this->failResult('手机格式不正确');
+            }
             $member = Db::table('member')->where('mobile', $phone)->value('id');
-
             if (!empty($member)) {
                 $data['token']   = $this->create_token($member);
                 $data['mobile']  = $phone;
