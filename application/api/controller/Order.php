@@ -1282,15 +1282,16 @@ class Order extends ApiBase
      */
     public function apply_refund(){
         $user_id = $this->get_user_id();
-        print_r($user_id);die;
+
         $order_id = input('order_id');
         $refund_type = input('refund_type');
-        $refund_reason = input('refund_reason');
-        $cancel_remark = input('cancel_remark');
+//        $refund_reason = input('refund_reason');
+        $refund_reason = input('cancel_remark');
         $create_time = time();
         $img = input('img');
 
         $order = Db::table('order')->where('order_id',$order_id)->where('user_id',$user_id)->field('order_id,order_status,pay_status,shipping_status')->find();
+
         if(!$order) $this->ajaxReturn(['status' => 301 , 'msg'=>'订单不存在！','data'=>'']);
 
         if($order['pay_status'] == 0){
@@ -1300,7 +1301,6 @@ class Order extends ApiBase
         if( $order['order_status'] > 3 && $order['order_status'] != 8 ){
             $this->ajaxReturn(['status' => 301 , 'msg'=>'参数错误！','data'=>'']);
         }
-
         $refund = Db::table('order_refund')->where('order_id',$order['order_id'])->find();
         if($refund){
             if($refund['refund_status'] == 0){

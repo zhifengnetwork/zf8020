@@ -1457,6 +1457,37 @@ class User extends ApiBase
         return $this->successResult($announce);
     }
 
+    //排行榜
+    public function ranking_list()
+    {
+        $user_id = $this->get_user_id();
+        $data=DB::name('order')
+            ->alias('o')
+            ->join('member m ','m.id=o.user_id')
+            ->where('o.order_status > 1 AND o.order_status != 7')
+            ->group('o.user_id')
+            ->field('o.user_id,m.avatar,m.realname,sum(o.total_amount) as total')
+            ->order('total desc')
+            ->select();
 
+        foreach ($data as $key => $value)
+        {
+            if (($key-1) < 0){
+                $data[$key]['different_last'] = 0;
+            }else{
+                $data[$key]['different_last'] = $data[$key-1]['total']-$data[$key]['total'];
+            }
 
+            if ($value['user_id'] == $user_id){
+                $my_ranking = $key;
+            }
+        }
+
+        if ($my_ranking){
+            $data['my_ranking'] =  $my_ranking;
+        }else{
+            return $this->failResult("没有订单信息");
+        }
+        return $this->successResult($data);
+    }
 }
