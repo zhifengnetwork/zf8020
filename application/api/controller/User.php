@@ -1490,4 +1490,50 @@ class User extends ApiBase
         }
         return $this->successResult($data);
     }
+
+    //今日奖金池
+    public function today_bonus()
+    {
+
+        $bonus = DB::name('bonus_pool')
+            ->where('is_day',0)
+            ->field('money,create_time')
+            ->select();
+
+        $sum = 0;
+        foreach ($bonus as $key=>$value)
+        {
+            if (date('Y-m-d') == date('Y-m-d',$bonus[$key]['create_time'])){
+
+                $sum = $sum + $value['money'];
+            }
+        }
+        $lottery_time = date("Y-m-d",strtotime("+1 day"));
+
+        $data['total'] = $sum . '.00';
+        $data['lottery_time'] = $lottery_time.' 00:00';
+        return $this->successResult($data);
+    }
+
+    //月奖金池
+    public function mon_bonus()
+    {
+
+        $bonus = DB::name('bonus_pool')
+            ->where('is_day',1)
+            ->field('money,create_time')
+            ->select();
+
+        $sum = 0;
+        foreach ($bonus as $key=>$value)
+        {
+            if (date('Y-m') == date('Y-m',$bonus[$key]['create_time'])){
+
+                $sum = $sum + $value['money'];
+            }
+        }
+
+        $data['total'] = $sum . '.00';
+        return $this->successResult($data);
+    }
 }

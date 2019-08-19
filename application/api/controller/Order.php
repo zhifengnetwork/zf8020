@@ -255,7 +255,6 @@ class Order extends ApiBase
     public function submitOrder()
     {   
         $user_id = $this->get_user_id();
-        
         $cart_str = input("cart_id");
         $addr_id = input("address_id");
         $coupon_id = input("coupon_id");
@@ -448,6 +447,26 @@ class Order extends ApiBase
         // 添加订单商品
         foreach($order_goods as $key=>$value){
 
+             $push = Db::table('goods')
+                 ->where('goods_id', $value['goods_id'])
+                 ->field('is_push,price')
+                 ->find();
+             if ($push['is_push'] == 1){
+
+                 $pool['goods_id'] =  $value['goods_id'];
+                 $pool['uid']      = $user_id;
+                 $pool['money']    = 9;
+                 $pool['is_day']   = 0;
+                 $pool['create_time'] = time();
+                 $res = Db::table('bonus_pool')->insert($pool);
+             }else{
+                 $pool['goods_id'] =  $value['goods_id'];
+                 $pool['uid']      = $user_id;
+                 $pool['money']    = $push['price'] * 0.1;
+                 $pool['is_day']   = 1;
+                 $pool['create_time'] = time();
+                 $res = Db::table('bonus_pool')->insert($pool);
+             }
             $order_goods[$key]['order_id'] = $order_id;
             //拍下减库存
             if($value['less_stock_type']==1){
@@ -464,9 +483,9 @@ class Order extends ApiBase
         if($coupon_price){
             Db::table('coupon_get')->where('user_id',$user_id)->where('coupon_id',$coupon_id)->update(['is_use'=>1,'use_time'=>time()]);
         }
-        
         $res = Db::table('order_goods')->insertAll($order_goods);
         if (!empty($res)) {
+
             //将商品从购物车删除
             Db::table('cart')->where('id','in',$cart_str)->delete();
             
