@@ -459,6 +459,13 @@ class Order extends ApiBase
                  $pool['is_day']   = 0;
                  $pool['create_time'] = time();
                  $res = Db::table('bonus_pool')->insert($pool);
+                 $nickname = Db::table('member')->where('id',$user_id)->field('realname')->find();
+                 $log['uid'] = $user_id;
+                 $log['title'] = $nickname['realname'].'购买会员产品增加日奖金池9元';
+                 $log['money'] = 9;
+                 $log['create_time'] = time();
+                 $log['is_day'] = 0;
+                 Db::table('cashing_prize_log')->insert($log);
              }else{
                  $pool['goods_id'] =  $value['goods_id'];
                  $pool['uid']      = $user_id;
@@ -466,6 +473,14 @@ class Order extends ApiBase
                  $pool['is_day']   = 1;
                  $pool['create_time'] = time();
                  $res = Db::table('bonus_pool')->insert($pool);
+
+                 $nickname = Db::table('member')->where('id',$user_id)->field('realname')->find();
+                 $log['uid'] = $user_id;
+                 $log['title'] = $nickname['realname'].'购买产品增加月奖金池'.$push['price'] * 0.1 .'元';
+                 $log['money'] = $push['price'] * 0.1;
+                 $log['create_time'] = time();
+                 $log['is_day'] = 1;
+                 Db::table('cashing_prize_log')->insert($log);
              }
             $order_goods[$key]['order_id'] = $order_id;
             //拍下减库存
