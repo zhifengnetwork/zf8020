@@ -1700,32 +1700,29 @@ class User extends ApiBase
             }
     }
 
+
+
+
     /**
      * 重置支付密码
      * @return mixed
      */
     public function paypwd_reset()
     {
-        //检查是否第三方登录用户
-        $user = M('users')->where('user_id', $this->user_id)->find();
+            $user = M('member')->where('id', $this->user_id)->find();
 
-        $step = I('step', 1);
-        if ($step > 1) {
-            $check = session('validate_code');
-            if (empty($check)) {
-                $this->error('验证码还未验证通过', U('mobile/User/paypwd'));
+            $verify_code = input('verify_code/s', '');
+            //验证码判断
+            $res = $this->phoneAuth($user['mobile'], $verify_code);
+            if ($res === -1) {
+                return $this->failResult('验证码已过期！', 301);
+            } else if (!$res) {
+                return $this->failResult('验证码错误！', 301);
             }
-        }
-        if (IS_POST && $step == 2) {
             $new_password = trim(I('new_password'));
             $confirm_password = trim(I('confirm_password'));
-
             $userLogic = new UsersLogic();
             $data = $userLogic->paypwd($this->user_id, $new_password, $confirm_password);
             $this->ajaxReturn($data);
-            exit;
-        }
-        $this->assign('step', $step);
-        return $this->fetch();
     }
 }
