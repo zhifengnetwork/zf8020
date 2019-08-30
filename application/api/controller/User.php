@@ -1700,7 +1700,31 @@ class User extends ApiBase
             }
     }
 
+    /**
+     *  修改支付密码
+     * @param $user_id  用户id
+     * @param $new_password  新密码
+     * @return array
+     */
+    public function edit_pay_password()
+    {
+        $user = M('member')->where('id', $this->user_id)->find();
+        $user_id = $this->user_id;
+        $old_password = trim(input('old_password'));
+        if(!empty($old_password) && ($user['pwd'] != md5(C("AUTH_CODE").$old_password))){
+            $this->ajaxReturn(['status'=>-1,'msg'=>'原密码错误！','result'=>'']);
+        }
+        $new_password = trim(input('new_password'));
+        if (strlen($new_password) < 6) {
+            return array('status' => -1, 'msg' => '密码不能低于6位字符', 'result' => '');
+        }
 
+        $row = Db::name('member')->where(['id'=>$user_id])->update(array('pwd' =>md5(C("AUTH_CODE").$new_password)));
+        if (!$row) {
+            return array('status' => -1, 'msg' => '密码修改失败', 'result' => '');
+        }
+        return array('status' => 1, 'msg' => '密码修改成功', 'result' => '');
+    }
 
 
     /**

@@ -276,6 +276,15 @@ class Goods extends Common
 
         }
 
+
+
+        $list = M('table')->where("parentid=0")->order("id asc")->select();
+        foreach ($list as $k => $v) {
+            $list[$k]['v'] = M('table')->where('parentid='.$v['id'])->select();
+        }
+
+
+
         //商品属性
         $goods_attr = Db::table('goods_attr')->select();
         //商品一级分类
