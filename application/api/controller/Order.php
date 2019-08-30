@@ -514,6 +514,33 @@ class Order extends ApiBase
         }
     }
 
+
+    /**
+     * 支付密码
+     * @return mixed
+     */
+    public function paypwd()
+    {
+        $user = M('member')->where('id', $this->user_id)->find();
+
+            $paypwd = trim(input('paypwd'));
+            //以前设置过就得验证原来密码
+            if(!empty($user['pwd']) && ($user['pwd'] != md5(C("AUTH_CODE").$paypwd))){
+                $this->ajaxReturn(['status'=>-1,'msg'=>'原密码验证错误！','result'=>'']);
+            }
+            print_r($this->user_id);die;
+            $userLogic = new UsersLogic();
+            $data = $userLogic->paypwd($this->user_id, $new_password, $confirm_password);
+            $this->ajaxReturn($data);
+            exit;
+        $this->assign('step', $step);
+        return $this->fetch();
+    }
+
+
+
+
+
     /**
      * @api {POST} /order/order_list 订单列表
      * @apiGroup order
