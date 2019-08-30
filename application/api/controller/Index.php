@@ -139,11 +139,11 @@ class Index extends ApiBase
 //        $announce=Db::name('announce')->field('id,title,urllink as link,desc')->where(['status'=>1])->order('create_time','desc')->limit(3)->select();
 
 
-//        //自定义分类导航
-//        $selfnav = Db::table('catenav')->field('title,image,url')->where(['status' => ['<>', -1]])->limit(4)->select();
-//        for ($i = 0; $i < count($selfnav); $i++) {
-//            $navlist[$i]['image'] = SITE_URL . '/public/' . $selfnav[$i]['image'];
-//        }
+        //自定义分类导航
+        $selfnav = Db::table('catenav')->field('title,image,url')->where(['status' => ['<>', -1]])->limit(4)->select();
+        for ($i = 0; $i < count($selfnav); $i++) {
+            $navlist[$i]['image'] = SITE_URL . '/public/' . $selfnav[$i]['image'];
+        }
 
 
 //        //购买获取推荐专区
@@ -184,24 +184,24 @@ class Index extends ApiBase
             }
         }
 
-//        $goods_gift = Db::table('goods')->alias('g')
-//                ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
-//                ->where('gi.main',1)
-//                ->where('g.is_show',1)
-//                ->where('g.is_del',0)
-//                ->where('g.is_gift',1)
-//                ->order('g.goods_id DESC')
-//                ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
-//                ->paginate(4);
-//
-//        if($goods_gift){
-//            $goods_gift = $goods_gift->all();
-//            foreach($goods_gift as $key=>&$value){
-//                $value['img'] = Config('c_pub.apiimg') .$value['img'];
-//            }
-//        }
+        $goods_gift = Db::table('goods')->alias('g')
+                ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
+                ->where('gi.main',1)
+                ->where('g.is_show',1)
+                ->where('g.is_del',0)
+                ->where('g.is_gift',1)
+                ->order('g.goods_id DESC')
+                ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
+                ->paginate(4);
 
-        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'recommend_goods'=>$recommend_goods]]);
+        if($goods_gift){
+            $goods_gift = $goods_gift->all();
+            foreach($goods_gift as $key=>&$value){
+                $value['img'] = Config('c_pub.apiimg') .$value['img'];
+            }
+        }
+
+        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'shopping_spree'=>$goods_gift,'recommend_goods'=>$recommend_goods,]]);
     }
 
     //列表页
