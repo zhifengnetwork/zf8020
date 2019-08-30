@@ -1649,6 +1649,7 @@ class User extends ApiBase
     public function mon_bonus()
     {
 
+
         $bonus = DB::name('bonus_pool')
             ->where('is_day',1)
             ->field('money,create_time')
