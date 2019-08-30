@@ -453,31 +453,33 @@ class Order extends ApiBase
                  ->find();
              if ($push['is_push'] == 1){
 
+                 $money = Db::table('config')->where('name','day_bonus')->field('value')->find();
                  $pool['goods_id'] =  $value['goods_id'];
                  $pool['uid']      = $user_id;
-                 $pool['money']    = 9;
+                 $pool['money']    = $money['value'];
                  $pool['is_day']   = 0;
                  $pool['create_time'] = time();
                  $res = Db::table('bonus_pool')->insert($pool);
                  $nickname = Db::table('member')->where('id',$user_id)->field('realname')->find();
                  $log['uid'] = $user_id;
-                 $log['title'] = $nickname['realname'].'购买会员产品增加日奖金池9元';
-                 $log['money'] = 9;
+                 $log['title'] = $nickname['realname'].'购买会员产品增加日奖金池'.$money['value'].'元';
+                 $log['money'] = $money['value'];
                  $log['create_time'] = time();
                  $log['is_day'] = 0;
                  Db::table('cashing_prize_log')->insert($log);
              }else{
+                 $money = Db::table('config')->where('name','month_bonus')->field('value')->find();
                  $pool['goods_id'] =  $value['goods_id'];
                  $pool['uid']      = $user_id;
-                 $pool['money']    = $push['price'] * 0.1;
+                 $pool['money']    = $push['price'] * ($money['value']/100);
                  $pool['is_day']   = 1;
                  $pool['create_time'] = time();
                  $res = Db::table('bonus_pool')->insert($pool);
 
                  $nickname = Db::table('member')->where('id',$user_id)->field('realname')->find();
                  $log['uid'] = $user_id;
-                 $log['title'] = $nickname['realname'].'购买产品增加月奖金池'.$push['price'] * 0.1 .'元';
-                 $log['money'] = $push['price'] * 0.1;
+                 $log['title'] = $nickname['realname'].'购买产品增加月奖金池'.$push['price'] * ($money['value']/100) .'元';
+                 $log['money'] = $push['price'] * ($money['value']/100);
                  $log['create_time'] = time();
                  $log['is_day'] = 1;
                  Db::table('cashing_prize_log')->insert($log);

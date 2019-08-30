@@ -19,7 +19,7 @@ class Safe extends ApiBase
         // $this->user_id=27875;
         $user_id=$this->user_id;
         $user_info=Db::name('member')->field('realname,mobile')->where(['id'=>$user_id])->find();
-        $user_info=doPhone($user_info);
+//        $user_info=doPhone($user_info);
         $this->successResult($user_info);
     }
 
@@ -49,9 +49,7 @@ class Safe extends ApiBase
     {
         $phone = input('phone/s', '');
         $verify_code = input('verify_code/s', '');
-
-        $this->user_id=27875;
-
+//        $this->user_id=27875;
         $user_id=$this->user_id;
         //验证码判断
         $res = $this->phoneAuth($phone, $verify_code);

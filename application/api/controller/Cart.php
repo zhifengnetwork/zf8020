@@ -335,6 +335,7 @@ class Cart extends ApiBase
         }
         
         $res = Db::table('cart')->delete($cart_res);
+
         if ($res) {
             $this->ajaxReturn(['status' => 200 , 'msg'=>'成功！','data'=>'']);
         } else {

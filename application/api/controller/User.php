@@ -474,6 +474,7 @@ class User extends ApiBase
     {
         if (!Request::instance()->isPost()) return $this->getResult(301, 'error', '请求方式有误');
         $user_id = $this->get_user_id();
+
         if(!$user_id){
             return $this->failResult('用户不存在', 301);
         }
@@ -482,9 +483,14 @@ class User extends ApiBase
         //团队人数
         $team_count         = Db::query("SELECT count(*) as count FROM parents_cache where find_in_set('$user_id',`parents`)");
         //预计收益
-        $estimate_money     = Db::name('distrbut_commission_log')->where(['to_user_id' => $user_id,'distrbut_state' => 0])->field('sum(money) as money')->find();
+//        $estimate_money     = Db::name('distrbut_commission_log')->where(['to_user_id' => $user_id,'distrbut_state' => 0])->field('sum(money) as money')->find();
+        //上级
+        $first_leaderid   = Db::name('member')->where('id',$user_id)->value('first_leader');
+        $first_leadername   = Db::name('member')->where('id',$first_leaderid)->value('realname');
         $data['estimate_money']  = empty($estimate_money['money'])? 0.00 : $estimate_money['money'];//预计收入
         $data['distribut_money'] = $distribut_money;
+        $data['first_leader'] = $first_leaderid;
+        $data['first_leadername'] = $first_leadername;
         $data['team_count']      = $team_count[0]['count'] ? $team_count[0]['count'] : 0;
         return $this->successResult($data);
     }
@@ -561,6 +567,9 @@ class User extends ApiBase
       
         return $this->successResult($list);
     }
+
+
+
 
 
       /**
@@ -683,7 +692,7 @@ class User extends ApiBase
      
         $data['list'] = $list;
         
-        return $this->successResult($list);
+        return $this->successResult($data);
     }
 
 
@@ -1510,9 +1519,130 @@ class User extends ApiBase
         }
         $lottery_time = date("Y-m-d",strtotime("+1 day"));
 
+        $t = time();
+        $start = mktime(0,0,0,date("m",$t),date("d",$t),date("Y",$t));
+        $end = mktime(23,59,59,date("m",$t),date("d",$t),date("Y",$t));
+
+        $data=DB::name('member')
+            ->where('first_leader','>','0')
+            ->where('createtime','>=',$start)
+            ->where('createtime','<=',$end)
+            ->group('first_leader')
+            ->field('first_leader,realname ,count(first_leader) as num')
+            ->order('num desc')
+            ->limit(3)
+            ->select();
         $data['total'] = $sum . '.00';
         $data['lottery_time'] = $lottery_time.' 00:00';
         return $this->successResult($data);
+    }
+    //瓜分奖金池
+    public function get_bonus()
+    {
+        $bonus = DB::name('bonus_pool')
+        ->where('is_day',0)
+        ->field('money,create_time')
+        ->select();
+
+        $sum = 0;
+        foreach ($bonus as $key=>$value)
+        {
+            if (date('Y-m-d',time()-24*60*60) == date('Y-m-d',$bonus[$key]['create_time'])){
+
+                $sum = $sum + $value['money'];
+            }
+        }
+
+        $t = time()-24*60*60;
+        $start = mktime(0,0,0,date("m",$t),date("d",$t),date("Y",$t));
+        $end = mktime(23,59,59,date("m",$t),date("d",$t),date("Y",$t));
+        $data=DB::name('member')
+            ->where('first_leader','>','0')
+            ->where('createtime','>=',$start)
+            ->where('createtime','<=',$end)
+            ->group('first_leader')
+            ->field('first_leader,realname,remainder_money,count(first_leader) as num')
+            ->order('num desc')
+            ->limit(3)
+            ->select();
+        $direct_num =  Db::table('bonus_pool_setting')->field('direct_num')->select();
+
+        foreach ($direct_num as $k=>$v)
+        {
+            foreach ($data as $key => $value){
+                $data[$key]['num']=8;
+                if ($data[$key]['num'] >= $direct_num[0]['direct_num'] ){
+                    $ratio =  Db::table('bonus_pool_setting')->where('direct_num','<=',$data[$key]['num'])->field('proportion')->find();
+
+                    $bonus = $sum*$ratio['proportion']*0.01;
+                    Db::startTrans();
+
+                    $insert = [
+                        'user_id' => $data[$key]['first_leader'],
+                        'balance' => $data[$key]['remainder_money'] + $bonus,
+                        'source_type' => 11,
+                        'log_type' => 1,
+                        'note'     => '分得奖金',
+                        'create_time' => time(),
+                        'old_balance' => $data[$key]['remainder_money']
+                    ];
+                    Db::name('menber_balance_log')->insert($insert);
+
+                    $res = Db::table('member')->where('id',$data[$key]['first_leader'])->update(['remainder_money'=>$bonus]);
+                    if($res){
+                        Db::commit();
+                        $this->ajaxReturn(['status' => 200 , 'msg'=>'成功！','data'=>'']);
+                        //清空奖金池
+                        $tt = time()-24*60*60;
+                        $startt = mktime(0,0,0,date("m",$tt),date("d",$tt),date("Y",$tt));
+                        $endt = mktime(23,59,59,date("m",$tt),date("d",$tt),date("Y",$tt));
+                        DB::name('bonus_pool')
+                            ->where('is_day','0')
+                            ->where('create_time','>=',$startt)
+                            ->where('create_time','<=',$endt)
+                            ->update(['money'=>0]);
+                    }else{
+                        Db::rollback();
+                        $this->ajaxReturn(['status' => 301 , 'msg'=>'失败！','data'=>'']);
+                    }
+                }
+
+                if ($data[$key]['num'] >= $direct_num[$k]['direct_num'] && $data[$key]['num'] < $direct_num[$k-1]['direct_num'] ){
+                    $ratio =  Db::table('bonus_pool_setting')->where('direct_num','<=',$data[$key]['num'])->field('proportion')->find();
+
+                    $bonus = $sum*$ratio['proportion']*0.01;
+                    Db::startTrans();
+                    $insert = [
+                        'user_id' => $data[$key]['first_leader'],
+                        'balance' => $data[$key]['remainder_money'] + $bonus,
+                        'source_type' => 11,
+                        'log_type' => 1,
+                        'note'     => '分得奖金',
+                        'create_time' => time(),
+                        'old_balance' => $data[$key]['remainder_money']
+                    ];
+                    Db::name('menber_balance_log')->insert($insert);
+                    $res = Db::table('member')->where('id',$data[$key]['first_leader'])->update(['remainder_money'=>$bonus]);
+                    if($res){
+                        Db::commit();
+                        $this->ajaxReturn(['status' => 200 , 'msg'=>'成功！','data'=>'']);
+                        //清空奖金池
+                        $tt = time()-24*60*60;
+                        $startt = mktime(0,0,0,date("m",$tt),date("d",$tt),date("Y",$tt));
+                        $endt = mktime(23,59,59,date("m",$tt),date("d",$tt),date("Y",$tt));
+                        DB::name('bonus_pool')
+                            ->where('is_day','0')
+                            ->where('create_time','>=',$startt)
+                            ->where('create_time','<=',$endt)
+                            ->update(['money'=>0]);
+                    }else{
+                        Db::rollback();
+                        $this->ajaxReturn(['status' => 301 , 'msg'=>'失败！','data'=>'']);
+                    }
+                }
+            }
+        }
+        $this->ajaxReturn(['status' => 301 , 'msg'=>'未达到分奖金条件','data'=>'']);
     }
 
     //月奖金池
