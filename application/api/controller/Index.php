@@ -316,6 +316,76 @@ class Index extends ApiBase
 
 
 
+
+
+    //首页进口
+    public function index2()
+    {
+
+//        一级分类导航
+        $catenav = Db::table('category')->field('cat_id,cat_name')->where(['is_show' =>1 ])->select();
+
+        //轮播图
+        $banners=Db::name('advertisement')->field('picture,title,url')->where(['type'=>0,'state'=>1])->order('sort','desc')->limit(3)->select();
+        if($banners){
+            foreach($banners as $bk=>$bv){
+                $banners[$bk]['picture']=SITE_URL.$bv['picture'];
+            }
+        }
+
+
+        //公告
+//        $announce=Db::name('announce')->field('id,title,urllink as link,desc')->where(['status'=>1])->order('create_time','desc')->limit(3)->select();
+
+
+        //自定义分类广告
+        $selfnav = Db::table('catenav')->field('title,image,url')->where(['status' => ['<>', -1]])->limit(4)->select();
+        for ($i = 0; $i < count($selfnav); $i++) {
+            $navlist[$i]['image'] = SITE_URL . '/public/' . $selfnav[$i]['image'];
+        }
+
+
+        //优选商品
+        $recommend_goods = Db::table('goods')->alias('g')
+            ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
+            ->where('gi.main',1)
+            ->where('g.is_show',1)
+            ->where('g.is_del',0)
+            ->where('g.is_import',1)
+            ->where('FIND_IN_SET(3,g.goods_attr)')
+            ->order('g.goods_id DESC')
+            ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
+            ->limit(4)
+            ->select();
+
+        if($recommend_goods){
+//            $recommend_goods = $recommend_goods->all();
+            foreach($recommend_goods as $key=>&$value){
+                $value['img'] = Config('c_pub.apiimg') .$value['img'];
+            }
+        }
+
+        $goods_gift = Db::table('goods')->alias('g')
+            ->join('goods_img gi','gi.goods_id=g.goods_id','LEFT')
+            ->where('gi.main',1)
+            ->where('g.is_show',1)
+            ->where('g.is_del',0)
+            ->where('g.is_gift',1)
+            ->order('g.goods_id DESC')
+            ->field('g.goods_id,goods_name,gi.picture img,price,original_price')
+            ->paginate(4);
+
+        if($goods_gift){
+            $goods_gift = $goods_gift->all();
+            foreach($goods_gift as $key=>&$value){
+                $value['img'] = Config('c_pub.apiimg') .$value['img'];
+            }
+        }
+
+        $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['catenav'=>$catenav,'banners'=>$banners,'selfnav'=>$selfnav,'import'=>$recommend_goods]]);
+    }
+
+
     //二级分类
     public function cat2()
     {
@@ -323,4 +393,5 @@ class Index extends ApiBase
         $catenav = Db::table('category')->field('cat_id,cat_name')->where(['is_show' =>1 ,'level'=>2,'pid'=>$cat_id])->select();
         $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['goods'=>$catenav]]);
     }
+
 }

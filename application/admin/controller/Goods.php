@@ -213,6 +213,7 @@ class Goods extends Common
             
             
             $data['add_time'] = strtotime( $data['add_time'] );
+
             $goods_id = Db::table('goods')->strict(false)->insertGetId($data);
             
             if ( $goods_id ) {
@@ -278,10 +279,10 @@ class Goods extends Common
 
 
 
-        $list = M('table')->where("parentid=0")->order("id asc")->select();
-        foreach ($list as $k => $v) {
-            $list[$k]['v'] = M('table')->where('parentid='.$v['id'])->select();
-        }
+//        $list = M('table')->where("parentid=0")->order("id asc")->select();
+//        foreach ($list as $k => $v) {
+//            $list[$k]['v'] = M('table')->where('parentid='.$v['id'])->select();
+//        }
 
 
 
