@@ -394,4 +394,46 @@ class Index extends ApiBase
         $this->ajaxReturn(['status' => 200 , 'msg'=>'获取成功','data'=>['goods'=>$catenav]]);
     }
 
+
+
+    /**
+     * 上传身份证
+     */
+    public function updata_idcard_pic()
+    {
+        $user_id = $this->get_user_id();
+        if (!$user_id) {
+            $this->ajaxReturn(['status' => -1, 'msg' => '用户不存在', 'data' => '']);
+        }
+        $pic_front = input('pic_front');
+        $pic_back = input('pic_back');
+        $idname = input('name');
+        $idcard = input('idcard');
+
+        if(empty($pic_front) || empty($pic_back)){
+            $this->ajaxReturn(['code'=>0,'msg'=>'上传图片不能为空','data'=>'']);
+        }
+        $saveNamefront       = request()->time().rand(0,99999) . '.png';
+        $saveNameback       = request()->time().rand(0,99999) . '.png';
+        $base64_pic_front  = explode(',', $pic_front);
+        $base64_pic_back  = explode(',', $pic_front);
+        $img_pic_front           = base64_decode($base64_pic_front[1]);
+        $img_pic_back           = base64_decode($base64_pic_back [1]);
+        //生成文件夹
+        $names = "public/idcard_pic";
+        $name  = "public/idcard_pic/" .date('Ymd',time());
+        if (!file_exists(ROOT_PATH .Config('c_pub.img').$names)){
+            mkdir(ROOT_PATH .Config('c_pub.img').$names,0777,true);
+        }
+        //保存图片到本地
+        $r   = file_put_contents(ROOT_PATH .Config('c_pub.img').$name.$saveNamefront,$img_pic_front);
+        $rr   = file_put_contents(ROOT_PATH .Config('c_pub.img').$name.$saveNameback,$img_pic_back);
+        if(!$r || !$rr){
+            $this->ajaxReturn(['status'=>-2,'msg'=>'上传出错','data' =>'']);
+        }
+        Db::name('member')->where(['id' => $user_id])->update(['pic_front' => SITE_URL.'/'.$name.$saveNamefront,'pic_back' => SITE_URL.'/'.$name.$saveNameback,'idcard'=>$idcard,'name'=>$idname]);
+
+        $this->ajaxReturn(['status'=>1,'msg'=>'上传成功','data'=>['pic_front' => SITE_URL.'/'.$name.$saveNamefront,'pic_back' => SITE_URL.'/'.$name.$saveNameback,'idcard'=>$idcard,'name'=>$idname]]);
+
+    }
 }
